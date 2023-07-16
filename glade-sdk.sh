@@ -1,37 +1,77 @@
 #!/bin/bash
 
-export GITLAB_ACCESS_TOKEN=glpat-mTXSzbJADpbM9uxha5ma
+export GITLAB_ACCESS_TOKEN=glpat-PAc5ewpc8YaE3BqkB7m1
 
 function usage() {
   echo "Usage: glade-ctl COMMAND [PROJECT_NAME] [BRANCH_NAME]"
   echo ""
   echo "Commands:"
-  echo "  init                      create necessary folders and pull project codes to their respective folders"
-  echo "  build-image [PROJECT_NAME] build container images for all the projects or specific projects"
-  echo "  up                        launch all services in docker containers"
-  echo "  down                      bring down all running containers"
-  echo "  switch [PROJECT_NAME] [BRANCH_NAME] switch projects to the specified branch"
-  echo "  pull [PROJECT_NAME]       git-pull from remote for all projects"
+  echo "  init                                    create necessary folders and pull project codes to their respective folders"
+  echo "  build-image [PROJECT_NAME]              build container images for all the projects or specific projects"
+  echo "  up                                      launch all services in docker containers"
+  echo "  down                                    bring down all running containers"
+  echo "  switch [PROJECT_NAME] [BRANCH_NAME]     switch projects to the specified branch"
+  echo "  pull [PROJECT_NAME] [BRANCH_NAME]       git-pull from remote for all projects"
+  echo "  add  [PROJECT_NAME]                     stage all changes in the current project directory"
+  echo "  push [PROJECT_NAME] [BRANCH_NAME]       push all changes to remote git repository"
 }
 
 
 
 function init() {
+  # Function to install figlet based on the package manager
+  install_figlet() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      # Install figlet using brew on Mac OS
+      brew install figlet
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+      # Install figlet using apt on Linux
+      sudo apt-get update
+      sudo apt-get install figlet
+    else
+      # Unsupported operating system
+      echo "Unsupported operating system. Unable to install figlet."
+      exit 1
+    fi
+  }
+
   # Check if figlet is installed
-if ! [ -x "$(command -v figlet)" ]; then
+  if ! [ -x "$(command -v figlet)" ]; then
     # Prompt the user to install figlet
     read -p "Figlet is needed to run, do you accept? (y/n) " answer
     if [[ $answer == "y" ]]; then
-        # Install figlet using apt-get
-        sudo apt-get install figlet
+      install_figlet
     else
-        # Exit the script if the user chooses not to install figlet
-        exit 1
+      # Exit the script if the user chooses not to install figlet
+      exit 1
     fi
-fi
+  fi
+
+  # Function to install jq if not already installed
+  install_jq() {
+    if ! [ -x "$(command -v jq)" ]; then
+      if [[ "$OSTYPE" == "darwin"* ]]; then
+        # Install jq using brew on Mac OS
+        brew install jq
+      elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # Install jq using apt on Linux
+        sudo apt-get update
+        sudo apt-get install jq
+      else
+        # Unsupported operating system
+        echo "Unsupported operating system. Unable to install jq."
+        exit 1
+      fi
+    fi
+  }
+
+  # Install jq
+  install_jq
+
   echo "Welcome to the Glade command line tool!"
   # Draw Glade-ctl logo
   figlet Glade-ctl
+
   
   if [ ! -d "project-files" ]; then
     mkdir project-files
@@ -155,8 +195,6 @@ function switch() {
 }
 
 
-
-
 function pull() {
   if [ ! -d "project-files/$1" ]; then
     echo "Project directory not found: $1"
@@ -164,7 +202,30 @@ function pull() {
   fi
 
   cd "project-files/$1" || exit
-  git pull origin "$2"
+  git pull origin "$2" --allow-unrelated-histories
+  cd - || exit
+}
+
+
+function add() {
+  if [ ! -d "project-files/$1" ]; then
+    echo "Project directory not found: $1"
+    return 1
+  fi
+
+  cd "project-files/$1" || exit
+  git add .
+  cd - || exit
+}
+
+function push() {
+  if [ ! -d "project-files/$1" ]; then
+    echo "Project directory not found: $1"
+    return 1
+  fi
+
+  cd "project-files/$1" || exit
+  git push origin "$2"
   cd - || exit
 }
 
